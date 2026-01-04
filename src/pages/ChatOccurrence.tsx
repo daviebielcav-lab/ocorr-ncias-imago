@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -76,7 +77,7 @@ export default function ChatOccurrence() {
     setIsLoading(true);
 
     try {
-      // Send to n8n webhook
+      // Send to n8n webhook - AI extracts the data and returns it
       const response = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
         headers: {
@@ -96,13 +97,32 @@ export default function ChatOccurrence() {
       const data = await response.json();
       console.log("n8n response:", data);
 
-      // Check if n8n returned success with occurrence data
-      if (data.success && data.occurrence_id) {
-        setOccurrenceId(data.occurrence_id);
+      // Check if n8n returned the extracted data
+      if (data.nome && data.telefone && data.data_nascimento && data.tipo && data.motivo) {
+        // Save to database with status "pendente" via Supabase
+        const { data: occurrence, error: dbError } = await supabase
+          .from('occurrences')
+          .insert({
+            nome: data.nome,
+            telefone: data.telefone,
+            nascimento: data.data_nascimento,
+            tipo: data.tipo,
+            motivo: data.motivo,
+            status: 'pendente'
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          console.error("Database error:", dbError);
+          throw new Error("Erro ao salvar no banco de dados");
+        }
+
+        setOccurrenceId(occurrence.id);
         setIsSuccess(true);
         addMessage(
           "bot",
-          `✅ Ocorrência registrada com sucesso!\n\n**ID da ocorrência:** ${data.occurrence_id}\n\nGuarde este ID para acompanhamento. Nossa equipe analisará sua solicitação em breve.`
+          `✅ Ocorrência registrada com sucesso!\n\n**Protocolo:** ${occurrence.protocolo || occurrence.id.slice(0, 8).toUpperCase()}\n\n**Dados extraídos:**\n• Nome: ${data.nome}\n• Telefone: ${data.telefone}\n• Nascimento: ${data.data_nascimento}\n• Tipo: ${data.tipo}\n• Motivo: ${data.motivo}\n\nSua solicitação está pendente de análise pela nossa equipe.`
         );
       } else if (data.error) {
         addMessage(
@@ -110,18 +130,16 @@ export default function ChatOccurrence() {
           `❌ Não foi possível processar sua mensagem:\n\n${data.error}\n\nPor favor, tente novamente com todas as informações necessárias.`
         );
       } else {
-        // Generic success without occurrence_id
         addMessage(
           "bot",
-          `✅ Mensagem recebida!\n\nSua solicitação foi enviada para análise. Aguarde retorno da nossa equipe.`
+          `❌ Não foi possível extrair todas as informações da sua mensagem.\n\nPor favor, envie novamente incluindo:\n• Nome completo\n• Telefone\n• Data de nascimento (DD/MM/AAAA)\n• Tipo de ocorrência\n• Motivo`
         );
-        setIsSuccess(true);
       }
     } catch (error) {
-      console.error("Error sending to webhook:", error);
+      console.error("Error:", error);
       addMessage(
         "bot",
-        `❌ Erro ao enviar sua mensagem. Por favor, tente novamente em alguns instantes.`
+        `❌ Erro ao processar sua mensagem. Por favor, tente novamente em alguns instantes.`
       );
       toast.error("Erro ao conectar com o servidor");
     } finally {
