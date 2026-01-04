@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { FileText, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { FileText, ArrowRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { OccurrenceModal } from "@/components/OccurrenceModal";
 
@@ -14,10 +15,16 @@ const Index = () => {
           <h1 className="text-xl font-semibold text-gradient">
             Ocorrências — Imago
           </h1>
-          <nav className="flex items-center gap-4">
+          <nav className="flex items-center gap-2">
             <Button variant="ghost" className="text-foreground">
               Início
             </Button>
+            <Link to="/admin">
+              <Button variant="ghost" className="text-muted-foreground">
+                <Shield className="h-4 w-4 mr-2" />
+                Admin
+              </Button>
+            </Link>
           </nav>
         </div>
       </header>
