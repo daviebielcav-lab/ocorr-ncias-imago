@@ -63,7 +63,7 @@ function formatDateTime(dateStr: string): string {
   });
 }
 
-// Generate PDF content as HTML (will be converted to PDF)
+// Generate PDF content as HTML
 function generatePdfHtml(occurrence: any, protocolo: string): string {
   return `
 <!DOCTYPE html>
@@ -144,6 +144,28 @@ function generatePdfHtml(occurrence: any, protocolo: string): string {
       font-size: 12px;
       font-weight: bold;
     }
+    .ai-section {
+      background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+      border: 1px solid #c7d2fe;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 10px;
+    }
+    .ai-section h3 {
+      color: #4f46e5;
+      margin-bottom: 15px;
+      font-size: 16px;
+    }
+    .ai-field {
+      margin-bottom: 12px;
+    }
+    .ai-field-label {
+      font-size: 11px;
+      color: #6366f1;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 4px;
+    }
   </style>
 </head>
 <body>
@@ -192,16 +214,38 @@ function generatePdfHtml(occurrence: any, protocolo: string): string {
   </div>
   ` : ''}
 
-  ${occurrence.ia_resumo ? `
+  ${(occurrence.ia_resumo || occurrence.classificacao || occurrence.conclusao) ? `
   <div class="section">
-    <div class="section-title">Resposta/Resumo da IA</div>
-    <div class="content-box ai-response">${occurrence.ia_resumo}</div>
+    <div class="section-title">Análise da IA</div>
+    <div class="ai-section">
+      ${occurrence.classificacao ? `
+      <div class="ai-field">
+        <div class="ai-field-label">Classificação</div>
+        <div><span class="badge">${occurrence.classificacao}</span></div>
+      </div>
+      ` : ''}
+      
+      ${occurrence.ia_resumo ? `
+      <div class="ai-field">
+        <div class="ai-field-label">Resumo</div>
+        <div>${occurrence.ia_resumo}</div>
+      </div>
+      ` : ''}
+      
+      ${occurrence.conclusao ? `
+      <div class="ai-field">
+        <div class="ai-field-label">Conclusão</div>
+        <div>${occurrence.conclusao}</div>
+      </div>
+      ` : ''}
+    </div>
   </div>
   ` : ''}
 
   <div class="footer">
-    <p>Documento gerado automaticamente pelo Sistema Imago</p>
-    <p>Este documento é válido como comprovante de registro de ocorrência.</p>
+    <p><strong>Sistema Imago - Gestão de Ocorrências</strong></p>
+    <p>Este documento é válido como comprovante de registro e análise de ocorrência.</p>
+    <p style="margin-top: 10px;">A decisão final é de responsabilidade do administrador.</p>
   </div>
 </body>
 </html>
@@ -251,8 +295,7 @@ serve(async (req) => {
     // Generate PDF HTML
     const pdfHtml = generatePdfHtml(occurrence, protocolo);
 
-    // Convert HTML to PDF using a simple approach - store as HTML for now
-    // In production, you could use a service like html-pdf-node or puppeteer
+    // Store as HTML (can be printed/saved as PDF by browser)
     const pdfFileName = `${protocolo}.html`;
     const pdfBlob = new Blob([pdfHtml], { type: "text/html" });
 
