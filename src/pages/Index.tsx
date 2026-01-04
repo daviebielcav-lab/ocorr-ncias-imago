@@ -1,11 +1,9 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { FileText, ArrowRight, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { OccurrenceModal } from "@/components/OccurrenceModal";
 
 const Index = () => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -52,7 +50,7 @@ const Index = () => {
           {/* CTA Button */}
           <Button
             size="lg"
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => navigate("/chat")}
             className="h-14 px-8 text-lg bg-gradient-primary hover:opacity-90 transition-all shadow-glow hover:shadow-none group"
           >
             Registrar ocorrência
@@ -75,9 +73,6 @@ const Index = () => {
           © 2026 Imago. Todos os direitos reservados.
         </div>
       </footer>
-
-      {/* Modal */}
-      <OccurrenceModal open={isModalOpen} onOpenChange={setIsModalOpen} />
     </div>
   );
 };
