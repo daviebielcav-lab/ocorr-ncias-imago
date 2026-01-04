@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.dashboard-stats]
 verify_jwt = false
+
+[functions.create-occurrence]
+verify_jwt = false
