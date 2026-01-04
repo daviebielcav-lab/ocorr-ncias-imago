@@ -97,56 +97,87 @@ export default function ChatOccurrence() {
       const data = await response.json();
       console.log("n8n response completo:", JSON.stringify(data, null, 2));
 
-      // Verificar se temos dados válidos (não vazios)
-      const hasValidData = 
-        data.nome && data.nome.trim() !== "" &&
-        data.telefone && data.telefone.trim() !== "" &&
-        data.data_nascimento && data.data_nascimento.trim() !== "" &&
-        data.tipo && data.tipo.trim() !== "" &&
-        data.motivo && data.motivo.trim() !== "";
-
-      if (hasValidData) {
-        // Save to database with status "pendente" via Supabase
-        const { data: occurrence, error: dbError } = await supabase
-          .from('occurrences')
-          .insert({
-            nome: data.nome.trim(),
-            telefone: data.telefone.trim(),
-            nascimento: data.data_nascimento.trim(),
-            tipo: data.tipo.trim(),
-            motivo: data.motivo.trim(),
-            status: 'pendente'
-          })
-          .select()
-          .single();
-
-        if (dbError) {
-          console.error("Database error:", dbError);
-          throw new Error("Erro ao salvar no banco de dados");
-        }
-
-        setOccurrenceId(occurrence.id);
+      // Verificar se o n8n retornou success: true (inserção já feita no n8n)
+      if (data.success && data.occurrence_id) {
+        setOccurrenceId(data.occurrence_id);
         setIsSuccess(true);
         addMessage(
           "bot",
-          `✅ Ocorrência registrada com sucesso!\n\n**Protocolo:** ${occurrence.protocolo || occurrence.id.slice(0, 8).toUpperCase()}\n\n**Dados extraídos:**\n• Nome: ${data.nome}\n• Telefone: ${data.telefone}\n• Nascimento: ${data.data_nascimento}\n• Tipo: ${data.tipo}\n• Motivo: ${data.motivo}\n\nSua solicitação está pendente de análise pela nossa equipe.`
+          `✅ Ocorrência registrada com sucesso!\n\n**ID:** ${data.occurrence_id.slice(0, 8).toUpperCase()}\n\nSua solicitação está aguardando análise pela nossa equipe.`
         );
+      } 
+      // Caso o n8n retorne os dados extraídos para salvar aqui (fallback)
+      else if (data.nome || data.telefone || data.nascimento || data.data_nascimento || data.motivo) {
+        // Aceitar dados parciais - campos vazios serão null/string vazia
+        const nome = data.nome?.trim() || "";
+        const telefone = data.telefone?.trim() || "";
+        const nascimento = data.nascimento?.trim() || data.data_nascimento?.trim() || "";
+        const tipo = data.tipo?.trim() || "Administrativa";
+        const motivo = data.motivo?.trim() || "";
+
+        // Precisamos pelo menos do nome OU telefone OU motivo para salvar
+        const hasMinimumData = nome || telefone || motivo;
+
+        if (hasMinimumData) {
+          // Salvar no Supabase mesmo com dados parciais
+          const insertData: any = {
+            nome: nome || "Não informado",
+            telefone: telefone || "Não informado", 
+            nascimento: nascimento || new Date().toISOString().split('T')[0],
+            tipo: tipo,
+            motivo: motivo || "Não informado",
+            status: 'aberta'
+          };
+
+          const { data: occurrence, error: dbError } = await supabase
+            .from('occurrences')
+            .insert(insertData)
+            .select()
+            .single();
+
+          if (dbError) {
+            console.error("Database error:", dbError);
+            throw new Error("Erro ao salvar no banco de dados");
+          }
+
+          setOccurrenceId(occurrence.id);
+          setIsSuccess(true);
+          
+          // Mostrar quais dados foram capturados e quais estão faltando
+          const camposFaltando = [];
+          if (!nome) camposFaltando.push("Nome");
+          if (!telefone) camposFaltando.push("Telefone");
+          if (!nascimento) camposFaltando.push("Data de nascimento");
+          if (!motivo) camposFaltando.push("Motivo");
+
+          let mensagem = `✅ Ocorrência registrada!\n\n**ID:** ${occurrence.id.slice(0, 8).toUpperCase()}\n\n**Dados capturados:**`;
+          if (nome) mensagem += `\n• Nome: ${nome}`;
+          if (telefone) mensagem += `\n• Telefone: ${telefone}`;
+          if (nascimento) mensagem += `\n• Nascimento: ${nascimento}`;
+          mensagem += `\n• Tipo: ${tipo}`;
+          if (motivo) mensagem += `\n• Motivo: ${motivo}`;
+
+          if (camposFaltando.length > 0) {
+            mensagem += `\n\n⚠️ **Campos pendentes:** ${camposFaltando.join(", ")}\n\nO administrador poderá completar essas informações.`;
+          }
+
+          addMessage("bot", mensagem);
+        } else {
+          addMessage(
+            "bot",
+            `⚠️ Não foi possível identificar informações suficientes.\n\nPor favor, informe pelo menos:\n• Nome completo, ou\n• Telefone, ou\n• Motivo da ocorrência`
+          );
+        }
       } else if (data.error) {
         addMessage(
           "bot",
-          `❌ Não foi possível processar sua mensagem:\n\n${data.error}\n\nPor favor, tente novamente com todas as informações necessárias.`
+          `❌ Erro: ${data.error}\n\nPor favor, tente novamente.`
         );
       } else {
-        // Mostrar o que foi recebido para debug
-        const recebido = Object.entries(data)
-          .map(([k, v]) => `${k}: "${v || '(vazio)'}"`)
-          .join('\n');
-        
-        console.log("Dados recebidos do n8n (campos vazios):", data);
-        
+        console.log("Resposta inesperada do n8n:", data);
         addMessage(
           "bot",
-          `⚠️ O sistema não conseguiu extrair todas as informações.\n\n**Dados recebidos do n8n:**\n${recebido}\n\n**Por favor, verifique:**\n1. Se o workflow n8n está processando corretamente\n2. Se o Code node está encontrando os dados\n\nEnvie novamente com todas as informações.`
+          `⚠️ Resposta inesperada do sistema. Por favor, tente novamente.`
         );
       }
     } catch (error) {
