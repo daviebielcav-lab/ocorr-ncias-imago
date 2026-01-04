@@ -17,6 +17,8 @@ export type Database = {
       occurrences: {
         Row: {
           admin_descricao: string | null
+          classificacao: string | null
+          conclusao: string | null
           created_at: string
           ia_resumo: string | null
           id: string
@@ -31,6 +33,8 @@ export type Database = {
         }
         Insert: {
           admin_descricao?: string | null
+          classificacao?: string | null
+          conclusao?: string | null
           created_at?: string
           ia_resumo?: string | null
           id?: string
@@ -45,6 +49,8 @@ export type Database = {
         }
         Update: {
           admin_descricao?: string | null
+          classificacao?: string | null
+          conclusao?: string | null
           created_at?: string
           ia_resumo?: string | null
           id?: string
