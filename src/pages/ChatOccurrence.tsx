@@ -95,19 +95,26 @@ export default function ChatOccurrence() {
       }
 
       const data = await response.json();
-      console.log("n8n response:", data);
+      console.log("n8n response completo:", JSON.stringify(data, null, 2));
 
-      // Check if n8n returned the extracted data
-      if (data.nome && data.telefone && data.data_nascimento && data.tipo && data.motivo) {
+      // Verificar se temos dados válidos (não vazios)
+      const hasValidData = 
+        data.nome && data.nome.trim() !== "" &&
+        data.telefone && data.telefone.trim() !== "" &&
+        data.data_nascimento && data.data_nascimento.trim() !== "" &&
+        data.tipo && data.tipo.trim() !== "" &&
+        data.motivo && data.motivo.trim() !== "";
+
+      if (hasValidData) {
         // Save to database with status "pendente" via Supabase
         const { data: occurrence, error: dbError } = await supabase
           .from('occurrences')
           .insert({
-            nome: data.nome,
-            telefone: data.telefone,
-            nascimento: data.data_nascimento,
-            tipo: data.tipo,
-            motivo: data.motivo,
+            nome: data.nome.trim(),
+            telefone: data.telefone.trim(),
+            nascimento: data.data_nascimento.trim(),
+            tipo: data.tipo.trim(),
+            motivo: data.motivo.trim(),
             status: 'pendente'
           })
           .select()
@@ -130,9 +137,16 @@ export default function ChatOccurrence() {
           `❌ Não foi possível processar sua mensagem:\n\n${data.error}\n\nPor favor, tente novamente com todas as informações necessárias.`
         );
       } else {
+        // Mostrar o que foi recebido para debug
+        const recebido = Object.entries(data)
+          .map(([k, v]) => `${k}: "${v || '(vazio)'}"`)
+          .join('\n');
+        
+        console.log("Dados recebidos do n8n (campos vazios):", data);
+        
         addMessage(
           "bot",
-          `❌ Não foi possível extrair todas as informações da sua mensagem.\n\nPor favor, envie novamente incluindo:\n• Nome completo\n• Telefone\n• Data de nascimento (DD/MM/AAAA)\n• Tipo de ocorrência\n• Motivo`
+          `⚠️ O sistema não conseguiu extrair todas as informações.\n\n**Dados recebidos do n8n:**\n${recebido}\n\n**Por favor, verifique:**\n1. Se o workflow n8n está processando corretamente\n2. Se o Code node está encontrando os dados\n\nEnvie novamente com todas as informações.`
         );
       }
     } catch (error) {
