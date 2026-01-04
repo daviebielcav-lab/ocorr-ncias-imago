@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { LogOut, RefreshCw, Filter, Search } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
+import { LogOut, RefreshCw, Filter, Search, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -121,6 +121,12 @@ const AdminPanel = () => {
             </span>
           </div>
           <div className="flex items-center gap-2">
+            <Link to="/admin/dashboard">
+              <Button variant="outline" size="sm">
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Dashboard
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" onClick={fetchOccurrences}>
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
               Atualizar

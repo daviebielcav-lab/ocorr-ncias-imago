@@ -59,6 +59,21 @@ export type Database = {
         }
         Relationships: []
       }
+      protocol_counters: {
+        Row: {
+          counter: number
+          date_key: string
+        }
+        Insert: {
+          counter?: number
+          date_key: string
+        }
+        Update: {
+          counter?: number
+          date_key?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

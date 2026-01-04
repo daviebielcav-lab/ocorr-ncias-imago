@@ -12,6 +12,7 @@ import {
   Bot,
   Loader2,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -167,20 +168,17 @@ export function OccurrenceDetail({ occurrence, onUpdate, onClose }: OccurrenceDe
     setIsFinalizing(true);
 
     try {
-      // Generate mock protocol
-      const protocolo = `PROT-${Date.now().toString(36).toUpperCase()}`;
-      const pdfUrl = `mock://pdf/${occurrence.id}.pdf`;
-
-      const updated = await updateOccurrence({
-        status: "finalizada",
-        protocolo,
-        pdf_url: pdfUrl,
+      // Call the finalize edge function
+      const { data, error } = await supabase.functions.invoke("finalize-occurrence", {
+        body: { occurrence_id: occurrence.id },
       });
 
-      onUpdate(updated);
+      if (error) throw error;
+
+      onUpdate(data.occurrence);
       toast({
         title: "Ocorrência finalizada",
-        description: `Protocolo gerado: ${protocolo}`,
+        description: `Protocolo gerado: ${data.protocolo}`,
       });
     } catch (error) {
       console.error("Error finalizing:", error);
@@ -223,6 +221,18 @@ export function OccurrenceDetail({ occurrence, onUpdate, onClose }: OccurrenceDe
               Protocolo: {occurrence.protocolo}
             </p>
           </div>
+        )}
+
+        {/* PDF Download Button */}
+        {occurrence.pdf_url && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => window.open(occurrence.pdf_url!, "_blank")}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Baixar PDF
+          </Button>
         )}
 
         <Separator />

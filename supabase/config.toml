@@ -2,3 +2,9 @@ project_id = "vihnwezlabtrvdcsapjl"
 
 [functions.admin-occurrences]
 verify_jwt = false
+
+[functions.finalize-occurrence]
+verify_jwt = false
+
+[functions.dashboard-stats]
+verify_jwt = false
